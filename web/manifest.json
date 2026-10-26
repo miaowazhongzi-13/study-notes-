@@ -1,0 +1,17 @@
+{
+  "name": "学习笔记",
+  "short_name": "学习笔记",
+  "description": "个人学习笔记：时间线 + 文件夹 + 艾宾浩斯记忆复习，多设备云同步",
+  "lang": "zh-CN",
+  "start_url": "./?sharecode=6FVT4AIQ2N",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F7F5F0",
+  "theme_color": "#F7F5F0",
+  "icons": [
+    { "src": "icons/icon-192.png?sharecode=6FVT4AIQ2N", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png?sharecode=6FVT4AIQ2N", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png?sharecode=6FVT4AIQ2N", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
