@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5, user-scalable=yes">
 <meta name="theme-color" content="#F7F5F0" id="meta-theme">
 <title>学习笔记</title>
 <!-- 主题要在样式生效前定好，否则深色下打开会先白闪一下 -->
@@ -291,6 +291,42 @@
   }
   .rich-body ul,.rich-body ol{ margin:.4em 0 .6em; padding-left:1.4em; }
   .rich-body li{ margin:.2em 0; }
+
+  /* ---- 粘贴内容自适应：长文、代码块、表格都不许撑破屏幕 ---- */
+  .rich-body, .ed-rich{ overflow-wrap:anywhere; word-break:break-word; max-width:100%; }
+  .rich-body pre, .ed-rich pre{
+    white-space:pre-wrap; word-break:break-word; overflow-x:auto;
+    margin:.6em 0; padding:10px 12px; border-radius:10px;
+    background:rgba(0,0,0,.035); border:1px solid var(--line);
+    font-family:ui-monospace,Menlo,Consolas,"Courier New",monospace;
+    font-size:13px; line-height:1.6;
+  }
+  .rich-body code, .ed-rich code{
+    font-family:ui-monospace,Menlo,Consolas,"Courier New",monospace;
+    font-size:.92em; padding:1px 5px; border-radius:5px;
+    background:rgba(0,0,0,.035); word-break:break-word;
+  }
+  .rich-body table, .ed-rich table{
+    width:100% !important; max-width:100% !important;
+    border-collapse:collapse; table-layout:fixed;
+    margin:.7em 0; font-size:.94em;
+  }
+  .rich-body th, .rich-body td,
+  .ed-rich th, .ed-rich td{
+    border:1px solid var(--line); padding:7px 9px;
+    vertical-align:top; text-align:left;
+    white-space:normal !important; width:auto !important; min-width:0 !important;
+    word-break:break-word; overflow-wrap:anywhere;
+  }
+  .rich-body th, .ed-rich th{ background:var(--accent-soft); font-weight:600; color:var(--ink); }
+  .rich-body blockquote, .ed-rich blockquote{
+    margin:.6em 0; padding:.15em 0 .15em 12px;
+    border-left:3px solid var(--accent-soft); color:var(--ink2);
+  }
+  html[data-theme="dark"] .rich-body pre, html[data-theme="dark"] .ed-rich pre,
+  html[data-theme="dark"] .rich-body code, html[data-theme="dark"] .ed-rich code{
+    background:rgba(255,255,255,.065);
+  }
   .rich-body b,.rich-body strong{ font-weight:700; color:var(--ink); }
 
   .list-item{
@@ -1646,14 +1682,33 @@ function esc(s){
 function sanitize(html){
   const d = document.createElement('div');
   d.innerHTML = html || '';
-  d.querySelectorAll('script,style,iframe,object,embed,link,meta').forEach(n => n.remove());
+  d.querySelectorAll('script,style,iframe,object,embed,link,meta,colgroup,col').forEach(n => n.remove());
   d.querySelectorAll('*').forEach(el => {
     Array.from(el.attributes).forEach(a => {
       if (/^on/i.test(a.name)) el.removeAttribute(a.name);
       if ((a.name === 'href' || a.name === 'src') && /^\s*javascript:/i.test(a.value)) el.removeAttribute(a.name);
     });
   });
+  tidyStyles(d);
   return d.innerHTML;
+}
+
+/* 从网页/Word 复制过来的内容常带固定宽度、nowrap、浮动等样式，
+   在手机上一定撑破屏幕。这里只删掉这类"布局型"样式，颜色、字号、加粗都保留。 */
+const BAD_STYLE = /(?:^|;)\s*(?:white-space|width|min-width|max-width|height|min-height|max-height|float|position|left|top|right|bottom|margin-left|margin-right|overflow|overflow-x|overflow-y|table-layout|transform|zoom|display)\s*:[^;]*/gi;
+
+function tidyStyles(root){
+  root.querySelectorAll('[style]').forEach(el => {
+    if (el.tagName === 'IMG') return;          /* 图片的 width 样式是用户自己拖出来的，不能删 */
+    const st = el.getAttribute('style') || '';
+    const clean = st.replace(BAD_STYLE, '').replace(/^;+|;+$/g, '').trim();
+    if (clean) el.setAttribute('style', clean);
+    else el.removeAttribute('style');
+  });
+  root.querySelectorAll('td,th,table,img,pre,div,span,p').forEach(el => {
+    el.removeAttribute('width');
+    el.removeAttribute('height');
+  });
 }
 
 /* ============================================================
@@ -2320,6 +2375,32 @@ const edRich  = document.getElementById('ed-rich');
 const edTitle = document.getElementById('ed-title-inp');
 const edSave  = document.getElementById('ed-save');
 const edBody  = document.getElementById('ed-body');
+
+/* 粘贴统一入口：先用 tidyStyles 洗掉会导致溢出的布局样式，再插进编辑器 */
+edRich.addEventListener('paste', e => {
+  const cd = e.clipboardData || window.clipboardData;
+  if (!cd) return;
+  e.preventDefault();
+  const richHtml = cd.getData('text/html');
+  const plain = cd.getData('text/plain') || '';
+  let inserted = false;
+  if (richHtml){
+    try { inserted = document.execCommand('insertHTML', false, sanitize(richHtml)); } catch(err){ inserted = false; }
+  }
+  if (!inserted && plain){
+    try { document.execCommand('insertText', false, plain); } catch(err){ edRich.innerHTML += esc(plain).replace(/\n/g, '<br>'); }
+  }
+  edSave.disabled = !edTitle.value.trim();
+  clampRich();
+});
+
+/* 兜底：任何来源（云端拉取、旧笔记渲染）产生的超宽元素都夹回容器内 */
+function clampRich(){
+  edRich.querySelectorAll('table').forEach(t => {
+    t.style.maxWidth = '100%';
+    if (t.scrollWidth > edRich.clientWidth + 2) t.style.tableLayout = 'fixed';
+  });
+}
 
 let edFolder = null;
 let edFontSize = 15;

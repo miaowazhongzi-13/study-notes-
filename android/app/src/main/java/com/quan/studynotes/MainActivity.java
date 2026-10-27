@@ -117,9 +117,9 @@ public class MainActivity extends Activity {
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
-        s.setSupportZoom(false);
-        s.setBuiltInZoomControls(false);
-        s.setDisplayZoomControls(false);
+        s.setSupportZoom(true);
+        s.setBuiltInZoomControls(true);
+        s.setDisplayZoomControls(false);   /* 双指缩放要保留，但别显示丑丑的 +/- 按钮 */
         s.setUseWideViewPort(true);
         s.setLoadWithOverviewMode(false);
         s.setMediaPlaybackRequiresUserGesture(false);
